@@ -1,90 +1,193 @@
-flowchart TD
+### 🛡️ ENTERPRISE SIEM ARCHITECTURE FLOW 🛡️
 
-  %% Sources
-  A1[Endpoints<br/>(Laptops, Desktops)]
-  A2[Servers<br/>(Web, App, DB)]
-  A3[Network Devices<br/>(Firewall, Router)]
-  A4[Cloud Services<br/>(AWS, Azure)]
-  A5[Applications<br/>(ERP, CRM)]
-  
-  %% Collection
-  B1[Syslog, WEF, API Collection]
-  
-  %% Aggregation & Enrichment
-  C1[Log Aggregation<br/>(Logstash / Fluentd)]
-  C2[Parsing & Enrichment<br/>(GeoIP, Threat Intel)]
-  
-  %% Storage
-  D1[Distributed Log Storage<br/>(ElasticSearch, S3)]
-  
-  %% Threat Intel
-  D2[Threat Intelligence<br/>(Feeds, IOC)]
-  
-  %% SIEM
-  E1[SIEM Platform]
-  
-  %% Outputs from SIEM
-  F1[SOAR Platforms<br/>(Cortex XSOAR, Splunk Phantom)]
-  F2[Dashboards & Reporting]
-  F3[Team Workstations<br/>(L1 - L3 Analysts)]
-  
-  %% Automation & Logic
-  G1[Playbook Automation]
-  G2[Automated Ticket Creation]
-  G3[Conditional Logic]
-  G4[Analyst Reviews & Escalation]
-  
-  %% Actions if met
-  H1[Block IP]
-  H2[Isolate Endpoint]
-  H3[Delete Phishing Email]
-  H4[Enrich with Threat Intel]
-  
-  %% Feedback and resolution
-  I1[Feedback & Logging]
-  I2[Incident Resolution]
-  
-  %% Connections from sources to collection
-  A1 --> B1
-  A2 --> B1
-  A3 --> B1
-  A4 --> B1
-  A5 --> B1
-  
-  %% Collection to Aggregation
-  B1 --> C1
-  C1 --> D1
-  C1 --> C2
-  
-  %% Enrichment to storage and threat intel
-  C2 --> D1
-  C2 --> D2
-  
-  %% To SIEM
-  D1 --> E1
-  D2 --> E1
-  
-  %% SIEM outputs
-  E1 --> F1
-  E1 --> F2
-  E1 --> F3
-  
-  %% SOAR to Playbook
-  F1 --> G1
-  G1 --> G2
-  
-  %% Automation logic
-  G2 --> G3
-  G3 --|condition met| H1
-  G3 --|condition met| H2
-  G3 --|condition met| H3
-  G3 --|condition met| H4
-  G3 --|condition not met| G4
-  
-  %% Both flows lead to feedback and resolution
-  H1 --> I1
-  H2 --> I1
-  H3 --> I1
-  H4 --> I1
-  G4 --> I1
-  I1 --> I2
+```
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                           🌐 DATA SOURCES LAYER                                               ║
+╠═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐      ║
+║  │   📱 ENDPOINTS │  │   🖥️  SERVERS   │  │  🌐 NETWORK DEV │  │ ☁️  CLOUD SVCS │  │ 💼 APPLICATIONS │     ║
+║  │                 │  │                 │  │                 │  │                 │  │                 │      ║
+║  │ • Laptops       │  │ • Web Servers   │  │ • Firewalls     │  │ • AWS EC2/S3    │  │ • ERP Systems   │      ║
+║  │ • Desktops      │  │ • App Servers   │  │ • Routers       │  │ • Azure VMs     │  │ • CRM Platforms │      ║
+║  │ • Mobile Devices│  │ • DB Servers    │  │ • Switches      │  │ • Office365     │  │ • Active Dir    │      ║
+║  │ • IoT Devices   │  │ • File Servers  │  │ • Load Balancer │  │ • Salesforce    │  │ • Email Systems │      ║
+║  └─────────┬───────┘  └─────────┬───────┘  └─────────┬───────┘  └─────────┬───────┘  └─────────┬───────┘      ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+            │                      │                      │                      │                      │
+            └──────────┬───────────┴──────────┬───────────┴──────────┬───────────┴──────────┬───────────┘
+                       │                      │                      │                      │
+                       ▼                      ▼                      ▼                      ▼
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                         📡 COLLECTION LAYER                                                   ║
+╠═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║                              ┌─────────────────────────────────────────────────────┐                          ║
+║                              │            🔄 LOG COLLECTION HUB                    │                          ║
+║                              │                                                     │                          ║
+║                              │  • Syslog (RFC 3164/5424)    • WEF (Windows)       │                           ║
+║                              │  • API Collectors (REST/JSON) • SNMP Traps         │                           ║
+║                              │  • File Watchers             • Database Logs       │                           ║
+║                              │  • Cloud Native APIs         • Custom Connectors   │                           ║
+║                              └──────────────────┬──────────────────────────────────┘                          ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+                                                 │
+                                                 ▼
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                      ⚙️ PROCESSING & ENRICHMENT LAYER                                       ║
+╠══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║   ┌────────────────────────────────┐                    ┌─────────────────────────────────┐                  ║
+║   │       📊 LOG AGGREGATION       │                    │      🧠 PARSING & ENRICHMENT   │                  ║
+║   │                                │                    │                                 │                  ║
+║   │  • Logstash (ELK Stack)        │◄──────────────────►│  • GeoIP Location Mapping       │                  ║
+║   │  • Fluentd (CNCF)              │                    │  • Threat Intelligence Feeds    │                  ║
+║   │  • Apache Kafka (Streaming)    │                    │  • User/Asset Enrichment        │                  ║
+║   │  • Splunk Universal Forwarder  │                    │  • DNS/WHOIS Lookups            │                  ║
+║   │  • Filebeat/Winlogbeat         │                    │  • Malware Hash Checking        │                  ║
+║   └─────────────┬──────────────────┘                    └──────────────┬──────────────────┘                  ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+                 │                                                       │
+                 ▼                                                       ▼
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                     💾 STORAGE & INTELLIGENCE LAYER                                         ║
+╠══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║  ┌────────────────────────────────────┐              ┌───────────────────────────────────┐                   ║
+║  │     🗄️ DISTRIBUTED LOG STORAGE     │              │    🎯 THREAT INTELLIGENCE HUB    │                   ║
+║  │                                    │              │                                   │                   ║
+║  │  • Elasticsearch Cluster           │◄────────────►│  • IOC Feeds (STIX/TAXII)         │                   ║
+║  │  • AWS S3 (Cold Storage)           │              │  • Commercial Threat Intel        │                   ║
+║  │  • Splunk Indexers                 │              │  • Open Source Intel (OSINT)      │                   ║
+║  │  • Apache Kafka (Hot Data)         │              │  • Custom Indicators              │                   ║
+║  │  • Data Lake (Parquet/ORC)         │              │  • Reputation Databases           │                   ║
+║  └─────────────┬──────────────────────┘              └────────────┬──────────────────────┘                   ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+                 │                                                  │
+                 └──────────────────────┬───────────────────────────┘
+                                        ▼
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                        🔍 SIEM PLATFORM CORE                                                 ║
+╠═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║                              ┌────────────────────────────────────────┐                                       ║
+║                              │          🧩 CORRELATION ENGINE        │                                       ║
+║                              │                                        │                                       ║
+║                              │  • Real-time Event Correlation         │                                       ║
+║                              │  • Machine Learning Anomaly Detection  │                                       ║
+║                              │  • Behavioral Analytics (UEBA)         │                                       ║
+║                              │  • Risk Scoring & Prioritization       │                                       ║
+║                              │  • Custom Rule Engine                  │                                       ║
+║                              └──────────────┬─────────────────────────┘                                       ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+                                              │
+            ┌─────────────────────────────────┼─────────────────────────────────┐
+            │                                 │                                 │
+            ▼                                 ▼                                 ▼
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                       📤 ANALYSIS & OUTPUT LAYER                                             ║
+╠═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║ ┌─────────────────────┐    ┌─────────────────────┐    ┌──────────────────────────────────────┐                ║
+║ │  🤖 SOAR PLATFORMS │     │ 📊 DASHBOARDS &    │    │     👥 TEAM WORKSTATIONS            │                ║
+║ │                     │    │    REPORTING        │    │                                      │                ║
+║ │ • Cortex XSOAR      │    │                     │    │ 🥉 L1 Analysts (Triage & Monitor)   │                ║
+║ │ • Splunk Phantom    │    │ • Executive Dashbrd │    │ 🥈 L2 Analysts (Investigation)      │                ║
+║ │ • IBM Resilient     │    │ • SOC Dashboards    │    │ 🥇 L3 Analysts (Threat Hunting)     │                ║
+║ │ • Microsoft Sentinel│    │ • Compliance Reports│    │ 🔬 Forensics Team                   │                ║
+║ │ • Swimlane          │    │ • Threat Landscape  │    │ 📋 Incident Managers                │                ║
+  └──────────┬──────────┘    └─────────────────────┘    └──────────────────────────────────────┘                
+             │
+             ▼
+╔═════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                   🚀 AUTOMATION & ORCHESTRATION LAYER                                       ║
+╠═════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║  ┌────────────────────────────────┐              ┌─────────────────────────────────────┐                    ║
+║  │      📋 PLAYBOOK AUTOMATION   │              │     🎫 AUTOMATED TICKET CREATION    │                    ║
+║  │                                │              │                                     │                    ║
+║  │ • Incident Response Playbooks  │─────────────►│  • ServiceNow Integration           │                    ║
+║  │ • Threat Hunting Workflows     │              │  • Jira Ticket Management           │                    ║
+║  │ • Compliance Automation        │              │  • Slack/Teams Notifications        │                    ║
+║  │ • Evidence Collection Scripts  │              │  • Email Alert Distribution         │                    ║
+║  │ • Containment Procedures       │              │  • SMS/Voice Call Escalation        │                    ║
+║  └─────────────┬──────────────────┘              └──────────────┬──────────────────────┘                    ║
+╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+                 │                                                 │
+                 └─────────────────┬───────────────────────────────┘
+                                   ▼
+╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                    🧠 DECISION LOGIC ENGINE                                                    ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║                              ┌─────────────────────────────────────────┐                                       ║
+║                              │         ⚖️ CONDITIONAL LOGIC            │                                       ║
+║                              │                                         │                                       ║
+║                              │  🔍 Risk Score Analysis (0-100)         │                                       ║
+║                              │  📊 Confidence Level Assessment         │                                       ║
+║                              │  🎯 Asset Criticality Evaluation        │                                       ║
+║                              │  🔥 Threat Severity Classification      │                                       ║
+║                              │  ⏰ Time-based Escalation Rules         │                                       ║
+║                              └──────────────┬──────────────────────────┘                                       ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+                                              │
+                    ┌─────────────────────────┼─────────────────────────┐
+                    │                         │                         │
+              ✅ CRITERIA MET            ❌ CRITERIA NOT MET      🔄 MANUAL REVIEW
+                    │                         │                         │
+                    ▼                         ▼                         ▼
+╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                    ⚡ AUTOMATED RESPONSE ACTIONS                                              ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌────────────────────────────┐ ║
+║ │   🚫 BLOCK IP   │ │ 🔒 ISOLATE     │ │ 📧 DELETE       │ │ 🧠 ENRICH WITH │ │   👨‍💼 ANALYST REVIEW       │ ║
+║ │                 │ │   ENDPOINT      │ │   PHISHING      │ │   THREAT INTEL  │ │   & ESCALATION             │ ║
+║ │ • Firewall Rule │ │                 │ │   EMAIL         │ │                 │ │                            │ ║
+║ │ • Proxy Block   │ │ • Network       │ │                 │ │ • IOC Lookup    │ │ • Manual Investigation     │ ║
+║ │ • DNS Sinkhole  │ │   Quarantine    │ │ • O365 Removal  │ │ • Hash Analysis │ │ • Expert Analysis          │ ║
+║ │ • CDN Block     │ │ • EDR Isolation │ │ • Gmail Block   │ │ • Attribution   │ │ • Threat Hunting           │ ║
+║ └────────┬────────┘ └────────┬────────┘ └────────┬────────┘ └────────┬────────┘ └─────────────┬──────────────┘ ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+           │                   │                   │                   │                        │
+           └─────────────────── ───────────────────┼─────────────────── ────────────────────────┘
+                                                   ▼ 
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                   📝 FEEDBACK & CONTINUOUS IMPROVEMENT                                        ║
+╠═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║                              ┌────────────────────────────────────────┐                                       ║
+║                              │        📊 FEEDBACK & LOGGING           │                                       ║
+║                              │                                        │                                       ║
+║                              │  • Action Effectiveness Tracking       │                                       ║
+║                              │  • Performance Metrics Collection      │                                       ║
+║                              │  • False Positive Rate Analysis        │                                       ║
+║                              │  • Response Time Measurement           │                                       ║
+║                              │  • Compliance Audit Logging            │                                       ║
+║                              └──────────────┬─────────────────────────┘                                       ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+                                              │
+                                              ▼
+╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                      ✅ INCIDENT RESOLUTION & CLOSURE                                         ║
+╠═══════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║                              ┌─────────────────────────────────────────┐                                      ║
+║                              │      🎯 INCIDENT RESOLUTION            │                                       ║
+║                              │                                         │                                       ║
+║                              │  ✅ Threat Neutralized                  │                                       ║
+║                              │  📋 Post-Incident Report Generated      │                                       ║
+║                              │  🔄 Lessons Learned Documentation       │                                       ║
+║                              │  📈 KPI/SLA Metrics Updated             │                                       ║
+║                              │  🔐 Compliance Requirements Met         │                                       ║
+║                              │  📚 Knowledge Base Updated              │                                       ║
+║                              └─────────────────────────────────────────┘                                       ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+╔═════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                        📊 KEY PERFORMANCE INDICATORS                                           ║
+╠═════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║  📈 MTTR (Mean Time To Response): < 15 minutes        📊 Event Processing Rate: 1M+ events/sec                 ║
+║  🎯 False Positive Rate: < 5%                         ⚡ Automation Rate: 80%+ incidents                       ║
+║  🔍 Threat Detection Rate: 99.5%+                     📋 SLA Compliance: 99.9%                                 ║
+║  💾 Data Retention: 13 months hot, 7 years cold      🌐 Geographic Coverage: Multi-region                      ║
+╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                           🔧 INTEGRATION ECOSYSTEM                                             ║
+╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║  🔌 API Integrations: 200+ security tools    🔄 Data Formats: JSON, XML, CEF, LEEF, Syslog                    ║
+║  🌐 Cloud Platforms: AWS, Azure, GCP         📱 Mobile Support: iOS/Android SOC apps                          ║
+║  🛡️ EDR/XDR Integration: CrowdStrike, SentinelOne, Carbon Black                                               ║
+║  🔒 Identity Providers: Active Directory, Okta, Azure AD, Ping Identity                                       ║
+╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+```
